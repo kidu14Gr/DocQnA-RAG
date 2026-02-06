@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+*.log
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node / frontend (if you use React later)
+node_modules/
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# HuggingFace / model caches
+cache/
+*.ckpt
+*.bin
+
+.zencoder
+.zenflow
