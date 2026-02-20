@@ -74,16 +74,23 @@ class LLMModel:
 
     # --------------------------------------------
 
-    def classify_intent(self, question: str) -> str:
+    def classify_intent(self, question: str, history: str = "") -> str:
         system_prompt = (
             "You are an intent classifier. Decide if the user's question requires information "
-            "from an uploaded document or is a general question. Respond with exactly one word: "
+            "from an uploaded document or is a general question. Consider the conversation "
+            "history for follow-up questions and pronouns. Respond with exactly one word: "
             "DOCUMENT or GENERAL."
+        )
+
+        user_prompt = (
+            f"Conversation history:\n{history.strip() if history else 'NO PRIOR CONVERSATION'}\n\n"
+            f"User question:\n{question}\n\n"
+            "Label:"
         )
 
         response = self._chat(
             system_prompt=system_prompt,
-            user_prompt=question,
+            user_prompt=user_prompt,
             temperature=0.0,
             max_tokens=5
         )
@@ -108,10 +115,10 @@ class LLMModel:
 
     # --------------------------------------------
 
-    def generate_general(self, question: str) -> str:
+    def generate_general(self, prompt: str) -> str:
         return self._chat(
             system_prompt="You are a helpful assistant.",
-            user_prompt=question,
+            user_prompt=prompt,
             temperature=0.7,
             max_tokens=800
         )
