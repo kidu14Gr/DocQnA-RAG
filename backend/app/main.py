@@ -52,7 +52,7 @@ origins = [
     # dev hosts.
 ]
 
-# CORS: allow frontend origin(s)
+# CORS: c origin(s)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
