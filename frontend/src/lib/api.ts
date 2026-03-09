@@ -5,9 +5,25 @@ const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 const toError = async (response: Response) => {
   const text = await response.text();
+  if (!text) return new Error(`Request failed with status ${response.status}`);
   try {
     const j = JSON.parse(text);
-    return new Error(j.detail || text || `Request failed with status ${response.status}`);
+    const detail = j?.detail;
+    if (Array.isArray(detail)) {
+      const msg = detail
+        .map((item) => {
+          const loc = Array.isArray(item?.loc) ? item.loc.filter((p: unknown) => p !== 'body') : [];
+          const path = loc.length > 0 ? loc.join('.') : '';
+          const message = typeof item?.msg === 'string' ? item.msg : 'Invalid value';
+          return path ? `${path}: ${message}` : message;
+        })
+        .join('; ');
+      return new Error(msg || `Request failed with status ${response.status}`);
+    }
+    if (typeof detail === 'string' && detail.trim() !== '') {
+      return new Error(detail);
+    }
+    return new Error(text || `Request failed with status ${response.status}`);
   } catch {
     return new Error(text || `Request failed with status ${response.status}`);
   }

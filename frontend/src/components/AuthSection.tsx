@@ -27,9 +27,28 @@ export function AuthSection({ onAuthenticated }: AuthSectionProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const validateSignup = () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !trimmedEmail.includes('@') || trimmedEmail.length > 255) {
+      setError('Invalid email');
+      return false;
+    }
+    if (!password || password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return false;
+    }
+    const bytes = new TextEncoder().encode(password).length;
+    if (bytes > 72) {
+      setError('Password too long (must be 72 bytes or fewer).');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (isSignup && !validateSignup()) return;
     setLoading(true);
     try {
       const res = isSignup
@@ -113,3 +132,4 @@ export function AuthSection({ onAuthenticated }: AuthSectionProps) {
     </div>
   );
 }
+
