@@ -34,6 +34,14 @@ cache/
 *.ckpt
 *.bin
 
+# Ignore data directory contents but allow empty folder
+/data/*
+!/data/.gitkeep
+
+# Ignore uploaded_docs contents but allow empty folders
+/uploaded_docs/*
+!/uploaded_docs/.gitkeep
+
 .zencoder
 .zenflow
 frontend/README.md
