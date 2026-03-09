@@ -21,11 +21,14 @@ graph LR
   subgraph frontend
     A[React SPA]
   end
+
   subgraph backend
-    B[FastAPI] --> C[SQLAlchemy/PostgreSQL]
+    B[FastAPI]
+    B --> C[SQLAlchemy/PostgreSQL]
     B --> D[FAISS vector store]
     B --> E[RAG logic (rag_core)]
   end
+
   A -->|HTTP| B
 ```
 
