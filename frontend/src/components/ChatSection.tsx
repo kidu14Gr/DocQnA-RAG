@@ -7,9 +7,18 @@ interface ChatSectionProps {
   onSendMessage: (content: string) => void;
   documentName?: string;
   isAnswering: boolean;
+  isGuest?: boolean;
+  onUpgradeClick?: () => void;
 }
 
-export function ChatSection({ messages, onSendMessage, documentName, isAnswering }: ChatSectionProps) {
+export function ChatSection({
+  messages,
+  onSendMessage,
+  documentName,
+  isAnswering,
+  isGuest = false,
+  onUpgradeClick,
+}: ChatSectionProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,22 +66,37 @@ export function ChatSection({ messages, onSendMessage, documentName, isAnswering
               <div className="space-y-2">
                 <h3 className="text-slate-900">Ask anything about your document</h3>
                 <p className="text-slate-500 text-sm max-w-md">
-                  I'll provide detailed answers with exact citations from your document
+                  {isGuest
+                    ? 'I can chat about any topic. Sign in to upload documents and get citation-backed answers.'
+                    : "I'll provide detailed answers with exact citations from your document"}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 justify-center mt-6">
-                {['Summarize the main points', 'What are the key findings?', 'Explain the methodology'].map(
-                  (suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => setInput(suggestion)}
-                      className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-300"
-                    >
-                      {suggestion}
-                    </button>
-                  ),
-                )}
+                {(isGuest
+                  ? [
+                      'Tell me a fun fact about space',
+                      'Help me plan my day',
+                      'Explain quantum computing simply',
+                    ]
+                  : ['Summarize the main points', 'What are the key findings?', 'Explain the methodology']
+                ).map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => setInput(suggestion)}
+                    className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-300"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
               </div>
+              {isGuest && onUpgradeClick && (
+                <button
+                  onClick={onUpgradeClick}
+                  className="mt-2 px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow hover:shadow-lg transition-all duration-300"
+                >
+                  Sign in to unlock document chat
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -108,7 +132,7 @@ export function ChatSection({ messages, onSendMessage, documentName, isAnswering
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask a question about your document..."
+            placeholder={isGuest ? 'Ask me anything...' : 'Ask a question about your document...'}
             className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
             disabled={isAnswering}
           />

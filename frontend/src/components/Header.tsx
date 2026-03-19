@@ -4,15 +4,19 @@ import type { View } from '../types';
 interface HeaderProps {
   activeView: View;
   onNavigate: (view: View) => void;
+  isAuthenticated: boolean;
+  onOpenAuth?: () => void;
   onLogout?: () => void;
 }
 
-export function Header({ activeView, onNavigate, onLogout }: HeaderProps) {
+export function Header({ activeView, onNavigate, isAuthenticated, onOpenAuth, onLogout }: HeaderProps) {
   const navItems: Array<{ view: View; label: string; icon: React.ReactNode }> = [
     { view: 'home', label: 'Home', icon: <Home className="w-4 h-4" /> },
-    { view: 'upload', label: 'Upload', icon: <FileText className="w-4 h-4" /> },
     { view: 'chat', label: 'Chat', icon: <MessageSquare className="w-4 h-4" /> },
   ];
+  if (isAuthenticated) {
+    navItems.splice(1, 0, { view: 'upload', label: 'Upload', icon: <FileText className="w-4 h-4" /> });
+  }
 
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm">
@@ -57,6 +61,15 @@ export function Header({ activeView, onNavigate, onLogout }: HeaderProps) {
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Log out</span>
+              </button>
+            )}
+            {!isAuthenticated && onOpenAuth && (
+              <button
+                onClick={onOpenAuth}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                <span className="hidden sm:inline">Sign in</span>
+                <span className="sm:hidden">Auth</span>
               </button>
             )}
           </nav>

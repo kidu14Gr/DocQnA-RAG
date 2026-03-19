@@ -18,12 +18,22 @@ export function clearStoredToken(): void {
 
 interface AuthSectionProps {
   onAuthenticated: (token: string) => void;
+  initialMode?: 'signin' | 'signup';
+  title?: string;
+  subtitle?: string;
+  onClose?: () => void;
 }
 
-export function AuthSection({ onAuthenticated }: AuthSectionProps) {
+export function AuthSection({
+  onAuthenticated,
+  initialMode = 'signin',
+  title,
+  subtitle,
+  onClose,
+}: AuthSectionProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignup, setIsSignup] = useState(false);
+  const [isSignup, setIsSignup] = useState(initialMode === 'signup');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,11 +77,10 @@ export function AuthSection({ onAuthenticated }: AuthSectionProps) {
     <div className="h-full flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-6 animate-in fade-in duration-500">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold text-slate-900">
-            {isSignup ? 'Create account' : 'Sign in'}
-          </h2>
+          <h2 className="text-2xl font-semibold text-slate-900">{title ?? (isSignup ? 'Create account' : 'Sign in')}</h2>
           <p className="text-slate-500 mt-1">
-            {isSignup ? 'Register to upload and chat with your documents' : 'Use your account to continue'}
+            {subtitle ??
+              (isSignup ? 'Register to upload and chat with your documents' : 'Use your account to continue')}
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -128,6 +137,15 @@ export function AuthSection({ onAuthenticated }: AuthSectionProps) {
             {isSignup ? 'Sign in' : 'Sign up'}
           </button>
         </p>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            Continue as guest
+          </button>
+        )}
       </div>
     </div>
   );

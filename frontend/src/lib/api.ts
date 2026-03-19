@@ -39,24 +39,55 @@ export type UploadResult = { message?: string };
 export type QueryResult = { answer: string; sources?: Array<Record<string, unknown>> };
 export type AuthResult = { access_token: string; token_type: string };
 
+async function authRequest(
+  endpoint: '/auth/login' | '/auth/signup',
+  email: string,
+  password: string,
+): Promise<AuthResult> {
+  const normalizedEmail = email.trim();
+  const attempts: Array<{ headers: HeadersInit; body: BodyInit }> = [
+    {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, password, username: normalizedEmail }),
+    },
+    {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        username: normalizedEmail,
+        email: normalizedEmail,
+        password,
+      }),
+    },
+  ];
+
+  let lastError: Error | null = null;
+  for (let i = 0; i < attempts.length; i += 1) {
+    const response = await fetch(withBase(endpoint), {
+      method: 'POST',
+      headers: attempts[i].headers,
+      body: attempts[i].body,
+    });
+    if (response.ok) {
+      return response.json() as Promise<AuthResult>;
+    }
+
+    // Backward-compat retry: some backends validate a different body shape.
+    if (response.status === 422 && i < attempts.length - 1) {
+      lastError = await toError(response);
+      continue;
+    }
+    throw await toError(response);
+  }
+
+  throw lastError ?? new Error('Authentication failed');
+}
+
 export async function login(email: string, password: string): Promise<AuthResult> {
-  const response = await fetch(withBase('/auth/login'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!response.ok) throw await toError(response);
-  return response.json() as Promise<AuthResult>;
+  return authRequest('/auth/login', email, password);
 }
 
 export async function signup(email: string, password: string): Promise<AuthResult> {
-  const response = await fetch(withBase('/auth/signup'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!response.ok) throw await toError(response);
-  return response.json() as Promise<AuthResult>;
+  return authRequest('/auth/signup', email, password);
 }
 
 export async function uploadDocument(file: File, token?: string): Promise<UploadResult> {
@@ -91,6 +122,18 @@ export async function uploadDocument(file: File, token?: string): Promise<Upload
 }
 
 export async function askQuestion(question: string, topK = 4, token?: string): Promise<QueryResult> {
+  if (!token) {
+    const response = await fetch(withBase('/chat/general'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+    if (!response.ok) {
+      throw await toError(response);
+    }
+    return (await response.json()) as QueryResult;
+  }
+
   const formData = new FormData();
   formData.append('question', question);
   formData.append('top_k', String(topK));

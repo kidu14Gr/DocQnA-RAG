@@ -48,3 +48,64 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.6);
 }
+
+@keyframes chatbot-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ring-spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes core-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.chatbot-float {
+  animation: chatbot-float 3.5s ease-in-out infinite;
+}
+
+.chatbot-ring-spin {
+  animation: ring-spin 8s linear infinite;
+}
+
+.chatbot-ring-spin-reverse {
+  animation: ring-spin-reverse 11s linear infinite;
+}
+
+.chatbot-core-pulse {
+  animation: core-pulse 2.2s ease-in-out infinite;
+}
+
+.hero-gradient-orb {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(56, 189, 248, 0.28), transparent 35%),
+    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.35), transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(168, 85, 247, 0.25), transparent 45%);
+}
