@@ -33,7 +33,9 @@ def get_user_metadata_dir(user_id: uuid.UUID) -> Path:
 
 def get_user_faiss_index_path(user_id: uuid.UUID) -> str:
     """Path to FAISS index file for this user (for VectorStore)."""
-    return str(get_user_vectors_dir(user_id) / "faiss_index")
+    model_name = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    model_key = model_name.replace("/", "__").replace(":", "_")
+    return str(get_user_vectors_dir(user_id) / f"faiss_index_{model_key}")
 
 
 def safe_save_upload(user_id: uuid.UUID, filename: str, content: bytes) -> Path:

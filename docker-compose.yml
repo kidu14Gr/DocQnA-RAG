@@ -30,8 +30,10 @@ services:
       POSTGRES_PORT: 5432
       DATABASE_URL: postgresql://${POSTGRES_USER:-rag_admin}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ai_doc_rag}
       STORAGE_PATH: /app/storage
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
     volumes:
       - storage_volume:/app/storage
+      - hf_cache:/root/.cache/huggingface
     ports:
       - "8000:8000"
     depends_on:
@@ -50,4 +52,5 @@ services:
 volumes:
   postgres_data:
   storage_volume:
+  hf_cache:
 

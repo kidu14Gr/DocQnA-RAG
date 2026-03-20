@@ -10,6 +10,7 @@ class QueryBody(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     sources: list[dict] = Field(default_factory=list)
+    chat_id: str | None = None
 
 
 class UploadResponse(BaseModel):

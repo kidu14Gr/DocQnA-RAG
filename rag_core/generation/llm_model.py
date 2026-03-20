@@ -37,6 +37,8 @@ class LLMModel:
             "manual",
             "contract",
             "resume",
+            "cv",
+            "curriculum vitae",
             "in the document",
             "in the file",
             "in the pdf",

@@ -13,9 +13,13 @@ class Embedder:
 
     def __init__(self):
         token = os.getenv("HF_TOKEN")
+        model_name = os.getenv(
+            "EMBEDDING_MODEL",
+            "sentence-transformers/all-MiniLM-L6-v2",
+        )
 
         self.model = SentenceTransformer(
-            "sentence-transformers/all-mpnet-base-v2",
+            model_name,
             token=token
         )
 

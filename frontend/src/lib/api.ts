@@ -38,6 +38,8 @@ function headers(token?: string): HeadersInit {
 export type UploadResult = { message?: string };
 export type QueryResult = { answer: string; sources?: Array<Record<string, unknown>> };
 export type AuthResult = { access_token: string; token_type: string };
+export type ChatSessionResult = { id: string; title: string; updated_at: string };
+export type ChatMessageResult = { id: string; role: 'user' | 'assistant'; message: string; timestamp: string };
 
 async function authRequest(
   endpoint: '/auth/login' | '/auth/signup',
@@ -62,7 +64,7 @@ export async function signup(email: string, password: string): Promise<AuthResul
   return authRequest('/auth/signup', email, password);
 }
 
-export async function uploadDocument(file: File, token?: string): Promise<UploadResult> {
+export async function uploadDocument(file: File, token?: string, signal?: AbortSignal): Promise<UploadResult> {
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   const isDocx =
     file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
@@ -80,6 +82,7 @@ export async function uploadDocument(file: File, token?: string): Promise<Upload
     method: 'POST',
     headers: headers(token),
     body: formData,
+    signal,
   });
 
   if (!response.ok) {
@@ -93,7 +96,12 @@ export async function uploadDocument(file: File, token?: string): Promise<Upload
   }
 }
 
-export async function askQuestion(question: string, topK = 4, token?: string): Promise<QueryResult> {
+export async function askQuestion(
+  question: string,
+  topK = 4,
+  token?: string,
+  chatId?: string,
+): Promise<QueryResult & { chat_id?: string }> {
   if (!token) {
     const response = await fetch(withBase('/chat/general'), {
       method: 'POST',
@@ -115,6 +123,9 @@ export async function askQuestion(question: string, topK = 4, token?: string): P
   const formData = new FormData();
   formData.append('question', question);
   formData.append('top_k', String(topK));
+  if (chatId) {
+    formData.append('chat_id', chatId);
+  }
 
   const response = await fetch(withBase('/query'), {
     method: 'POST',
@@ -127,4 +138,32 @@ export async function askQuestion(question: string, topK = 4, token?: string): P
   }
 
   return (await response.json()) as QueryResult;
+}
+
+export async function listChatSessions(token: string): Promise<ChatSessionResult[]> {
+  const response = await fetch(withBase('/chat/sessions'), {
+    method: 'GET',
+    headers: headers(token),
+  });
+  if (!response.ok) throw await toError(response);
+  return (await response.json()) as ChatSessionResult[];
+}
+
+export async function createChatSession(token: string, title = 'New Chat'): Promise<ChatSessionResult> {
+  const response = await fetch(withBase('/chat/sessions'), {
+    method: 'POST',
+    headers: { ...headers(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+  if (!response.ok) throw await toError(response);
+  return (await response.json()) as ChatSessionResult;
+}
+
+export async function getChatMessages(token: string, sessionId: string): Promise<ChatMessageResult[]> {
+  const response = await fetch(withBase(`/chat/sessions/${sessionId}/messages`), {
+    method: 'GET',
+    headers: headers(token),
+  });
+  if (!response.ok) throw await toError(response);
+  return (await response.json()) as ChatMessageResult[];
 }

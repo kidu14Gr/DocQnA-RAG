@@ -25,10 +25,25 @@ class QueryPipeline:
         else:
             history_str = self.memory.load_memory_variables({}).get("history", "")
         intent = self.llm.classify_intent(question, history_str)
+        lowered = question.lower()
+        doc_keywords = (
+            "document", "doc", "docx", "pdf", "file", "uploaded", "report",
+            "paper", "manual", "contract", "resume", "cv", "curriculum vitae",
+            "in the document", "in the file", "according to the document",
+            "from the document", "based on the document", "page", "section",
+            "chapter", "table", "figure",
+        )
+        asks_about_document = any(keyword in lowered for keyword in doc_keywords)
+        has_uploaded_doc = not (self.store.index is None or not self.store.metadata)
 
         # If no document has been ingested and question is document-related
-        if intent == "DOCUMENT" and (self.store.index is None or not self.store.metadata):
-            answer = "Please upload your document first."
+        if (intent == "DOCUMENT" or asks_about_document) and not has_uploaded_doc:
+            answer = (
+                "Please provide the CV you'd like me to refer to, and I can give you a more specific "
+                "list of skills mentioned in it."
+                if ("cv" in lowered or "resume" in lowered or "curriculum vitae" in lowered)
+                else "Please upload a document first, then I can answer based on its contents."
+            )
             if history is None:
                 self.memory.save_context({"input": question}, {"output": answer})
             return {

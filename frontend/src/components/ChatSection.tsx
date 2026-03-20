@@ -32,6 +32,8 @@ export function ChatSection({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadAbortRef = useRef<AbortController | null>(null);
+  const progressIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,6 +51,20 @@ export function ChatSection({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const resetUploadUi = () => {
+    if (progressIntervalRef.current) {
+      window.clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    uploadAbortRef.current = null;
+    setUploadState('idle');
+    setUploadProgress(0);
+    setUploadingFileName('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -77,34 +93,33 @@ export function ChatSection({
     setUploadState('uploading');
     setUploadProgress(8);
 
-    const progressInterval = setInterval(() => {
+    uploadAbortRef.current = new AbortController();
+
+    progressIntervalRef.current = window.setInterval(() => {
       setUploadProgress((prev) => (prev >= 90 ? prev : prev + 7));
     }, 140);
 
     try {
-      await uploadDocument(file, token ?? undefined);
+      await uploadDocument(file, token ?? undefined, uploadAbortRef.current.signal);
       setUploadProgress(100);
-      setUploadState('processing');
-
-      setTimeout(() => {
-        setUploadState('complete');
-        setTimeout(() => {
-          onDocumentUpload?.(file.name);
-          setUploadState('idle');
-          setUploadProgress(0);
-          setUploadingFileName('');
-        }, 800);
-      }, 600);
+      setUploadState('complete');
+      onDocumentUpload?.(file.name);
+      window.setTimeout(() => {
+        resetUploadUi();
+      }, 500);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Upload failed. Please try again.';
-      setUploadError(message);
-      setUploadProgress(0);
-      setUploadState('idle');
-      setTimeout(() => setUploadError(null), 4000);
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setUploadError('Upload cancelled.');
+      } else {
+        const message = err instanceof Error ? err.message : 'Upload failed. Please try again.';
+        setUploadError(message);
+      }
+      resetUploadUi();
+      setTimeout(() => setUploadError(null), 2500);
     } finally {
-      clearInterval(progressInterval);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      if (progressIntervalRef.current) {
+        window.clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
     }
   };
@@ -115,6 +130,16 @@ export function ChatSection({
       return;
     }
     fileInputRef.current?.click();
+  };
+
+  const isUploadBusy = uploadState === 'uploading' || uploadState === 'processing';
+
+  const handleSendOrCancel = () => {
+    if (isUploadBusy) {
+      uploadAbortRef.current?.abort();
+      return;
+    }
+    handleSend();
   };
 
   return (
@@ -209,12 +234,6 @@ export function ChatSection({
                 <span className="text-slate-500">{uploadProgress}%</span>
               </>
             )}
-            {uploadState === 'processing' && (
-              <>
-                <FileText className="w-4 h-4 text-purple-600 animate-pulse flex-shrink-0" />
-                <span className="text-slate-600 flex-1 truncate">Processing {uploadingFileName}...</span>
-              </>
-            )}
             {uploadState === 'complete' && (
               <>
                 <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -242,7 +261,7 @@ export function ChatSection({
           <button
             type="button"
             onClick={handleAttachClick}
-            disabled={uploadState !== 'idle'}
+            disabled={isUploadBusy}
             className="p-3 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             title={isGuest ? 'Sign in to upload documents' : 'Attach document'}
           >
@@ -256,15 +275,15 @@ export function ChatSection({
             onKeyPress={handleKeyPress}
             placeholder={isGuest ? 'Ask me anything...' : 'Ask a question about your document...'}
             className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
-            disabled={isAnswering}
+            disabled={isAnswering || isUploadBusy}
           />
           <button
-            onClick={handleSend}
-            disabled={!input.trim() || isAnswering}
+            onClick={handleSendOrCancel}
+            disabled={(!input.trim() && !isUploadBusy) || isAnswering}
             className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 active:scale-95 flex items-center space-x-2"
           >
-            <Send className="w-5 h-5" />
-            <span className="hidden sm:inline">Send</span>
+            {isUploadBusy ? <X className="w-5 h-5" /> : <Send className="w-5 h-5" />}
+            <span className="hidden sm:inline">{isUploadBusy ? 'Cancel Upload' : 'Send'}</span>
           </button>
         </div>
       </div>

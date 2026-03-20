@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { AuthSection, clearStoredToken, getStoredToken, setStoredToken } from './components/AuthSection';
+import { useEffect, useState } from 'react';
+import { AuthSection, clearStoredToken, getStoredToken } from './components/AuthSection';
 import { Header } from './components/Header';
 import { ChatSection } from './components/ChatSection';
-import { ArrowRight, Sparkles, Bot, ShieldCheck, FileUp } from 'lucide-react';
-import { askQuestion } from './lib/api';
-import type { DocumentInfo, Message, View } from './types';
+import { ArrowRight, Sparkles, Bot, ShieldCheck, FileUp, Plus } from 'lucide-react';
+import { askQuestion, createChatSession, getChatMessages, listChatSessions } from './lib/api';
+import type { ChatSession, DocumentInfo, Message, View } from './types';
 
 const DEFAULT_TOP_K = 4;
 
@@ -15,6 +15,8 @@ export default function App() {
   const [authInitialMode, setAuthInitialMode] = useState<'signin' | 'signup'>('signin');
   const [uploadedDocument, setUploadedDocument] = useState<DocumentInfo | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState(false);
   const isAuthenticated = Boolean(token);
 
@@ -34,6 +36,38 @@ export default function App() {
     setActiveView('chat');
   };
 
+  const refreshSessions = async (authToken: string) => {
+    const items = await listChatSessions(authToken);
+    setSessions(items);
+    if (!activeChatId && items.length > 0) {
+      setActiveChatId(items[0].id);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) {
+      setSessions([]);
+      setActiveChatId(null);
+      return;
+    }
+    refreshSessions(token).catch(() => undefined);
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || !activeChatId) return;
+    getChatMessages(token, activeChatId)
+      .then((rows) => {
+        const restored: Message[] = rows.map((m) => ({
+          id: m.id,
+          type: m.role === 'assistant' ? 'ai' : 'user',
+          content: m.message,
+          timestamp: new Date(m.timestamp),
+        }));
+        setMessages(restored);
+      })
+      .catch(() => setMessages([]));
+  }, [token, activeChatId]);
+
   const handleSendMessage = async (content: string) => {
     const trimmed = content.trim();
     if (!trimmed) return;
@@ -50,7 +84,7 @@ export default function App() {
     setActiveView('chat');
 
     try {
-      const result = await askQuestion(trimmed, DEFAULT_TOP_K, token ?? undefined);
+      const result = await askQuestion(trimmed, DEFAULT_TOP_K, token ?? undefined, activeChatId ?? undefined);
       const sources = (result.sources ?? []).map((source, idx) => {
         const typed = source as Record<string, unknown>;
         const pageValue = typed.page ?? typed.page_number;
@@ -75,6 +109,12 @@ export default function App() {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+      if (result.chat_id && result.chat_id !== activeChatId) {
+        setActiveChatId(result.chat_id);
+      }
+      if (token) {
+        refreshSessions(token).catch(() => undefined);
+      }
     } catch (error) {
       const aiMessage: Message = {
         id: crypto.randomUUID?.() ?? `${Date.now()}-error`,
@@ -103,6 +143,8 @@ export default function App() {
                 setToken(null);
                 setUploadedDocument(null);
                 setMessages([]);
+                setSessions([]);
+                setActiveChatId(null);
                 setActiveView('home');
               }
             : undefined
@@ -175,18 +217,67 @@ export default function App() {
           </div>
         )}
 
-        {activeView === 'chat' && (
-          <ChatSection
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            documentName={uploadedDocument?.name}
-            isAnswering={isAnswering}
-            isGuest={!isAuthenticated}
-            onUpgradeClick={() => openAuthModal('signup')}
-            onDocumentUpload={handleDocumentUpload}
-            token={token}
-          />
-        )}
+        {activeView === 'chat' &&
+          (isAuthenticated ? (
+            <div className="h-full flex">
+              <aside className="w-72 border-r border-slate-200 bg-white/70 backdrop-blur-sm p-3 flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    if (!token) return;
+                    const created = await createChatSession(token, 'New Chat');
+                    setSessions((prev) => [created, ...prev.filter((s) => s.id !== created.id)]);
+                    setActiveChatId(created.id);
+                    setMessages([]);
+                    setUploadedDocument(null);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+                >
+                  <Plus className="w-4 h-4" /> New Chat
+                </button>
+                <div className="flex-1 overflow-y-auto space-y-2">
+                  {sessions.length === 0 && (
+                    <p className="text-sm text-slate-500 px-2 py-3">No chats yet. Start a new one.</p>
+                  )}
+                  {sessions.map((session) => (
+                    <button
+                      key={session.id}
+                      onClick={() => setActiveChatId(session.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg border transition ${
+                        activeChatId === session.id
+                          ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <p className="truncate text-sm">{session.title}</p>
+                    </button>
+                  ))}
+                </div>
+              </aside>
+              <div className="flex-1 min-w-0">
+                <ChatSection
+                  messages={messages}
+                  onSendMessage={handleSendMessage}
+                  documentName={uploadedDocument?.name}
+                  isAnswering={isAnswering}
+                  isGuest={!isAuthenticated}
+                  onUpgradeClick={() => openAuthModal('signup')}
+                  onDocumentUpload={handleDocumentUpload}
+                  token={token}
+                />
+              </div>
+            </div>
+          ) : (
+            <ChatSection
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              documentName={uploadedDocument?.name}
+              isAnswering={isAnswering}
+              isGuest={!isAuthenticated}
+              onUpgradeClick={() => openAuthModal('signup')}
+              onDocumentUpload={handleDocumentUpload}
+              token={token}
+            />
+          ))}
       </main>
 
       {showAuthModal && (
@@ -208,7 +299,7 @@ export default function App() {
                 onAuthenticated={(nextToken) => {
                   setToken(nextToken);
                   setShowAuthModal(false);
-                  if (activeView === 'home') setActiveView('upload');
+                  if (activeView === 'home') setActiveView('chat');
                 }}
               />
             </div>
