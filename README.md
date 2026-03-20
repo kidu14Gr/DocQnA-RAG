@@ -1,8 +1,25 @@
 # 🤖 AI Document RAG Chatbot
 
-AI‑powered question‑answering chatbot that bundles a **responsive React frontend**, a **FastAPI backend**,
-a PostgreSQL database and a FAISS vector store. Entire stack is open-source and can be run locally via
-**Docker Compose** or developed independently.
+<p align="left">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.12-blue?logo=python" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi" />
+  <img alt="React" src="https://img.shields.io/badge/React-Frontend-61DAFB?logo=react&logoColor=000" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-UI-3178C6?logo=typescript&logoColor=fff" />
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=fff" />
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=fff" />
+  <img alt="FAISS" src="https://img.shields.io/badge/Vector%20Store-FAISS-5B3CC4" />
+</p>
+
+AI-powered question-answering chatbot built with a **responsive React frontend**, a **FastAPI backend**, **PostgreSQL**, and **FAISS**.  
+It supports both **guest chat** and **authenticated document-grounded chat** with persistent history.
+
+## 🎬 Demo
+
+> Add your GIF demo at `frontend/public/screenshots/demo.gif` and keep this block as-is for GitHub rendering.
+
+![AI Doc RAG Demo](frontend/public/screenshots/demo.gif)
+
+### 🧭 What Users Can Do
 
 - chat freely as a guest,
 - sign in to upload PDF/DOCX files,
@@ -166,25 +183,4 @@ frontend/
   public/screenshots # README preview images
 ```
 
----
 
-## 🛡️ Production-Readiness Notes
-
-- ✅ Authenticated routes protect user-specific resources.
-- ✅ User data isolation for documents, vectors, and chat history.
-- ✅ Session-based chat history persisted in PostgreSQL.
-- ✅ Dockerized deployment with persistent DB/storage volumes.
-- ✅ Improved upload/cancel UX and robust error handling.
-
-Recommended next production hardening steps:
-
-- add CI checks (lint, type-check, tests),
-- use Alembic migrations for schema evolution,
-- add observability (structured logs, metrics, tracing),
-- add rate limiting and refresh-token strategy.
-
----
-
-## 🙌 Final Notes
-
-This project is now structured for smooth local development and scalable production evolution, while preserving the current working behavior.
