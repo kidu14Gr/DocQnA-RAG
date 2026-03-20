@@ -7,6 +7,7 @@ import { askQuestion, createChatSession, getChatMessages, listChatSessions } fro
 import type { ChatSession, DocumentInfo, Message, View } from './types';
 
 const DEFAULT_TOP_K = 4;
+const MAX_PROMPTS_PER_CHAT = 10;
 
 export default function App() {
   const [token, setToken] = useState<string | null>(() => getStoredToken());
@@ -19,6 +20,8 @@ export default function App() {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState(false);
   const isAuthenticated = Boolean(token);
+  const usedPromptsInActiveChat = messages.filter((m) => m.type === 'user').length;
+  const remainingPrompts = Math.max(0, MAX_PROMPTS_PER_CHAT - usedPromptsInActiveChat);
 
   const openAuthModal = (mode: 'signin' | 'signup' = 'signin') => {
     setAuthInitialMode(mode);
@@ -71,6 +74,17 @@ export default function App() {
   const handleSendMessage = async (content: string) => {
     const trimmed = content.trim();
     if (!trimmed) return;
+    if (isAuthenticated && remainingPrompts <= 0) {
+      const aiMessage: Message = {
+        id: crypto.randomUUID?.() ?? `${Date.now()}-limit`,
+        type: 'ai',
+        content:
+          'You have reached the 10-message limit for this chat. Please upgrade to premium to continue in this chat, or create a New Chat +.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      return;
+    }
 
     const userMessage: Message = {
       id: crypto.randomUUID?.() ?? Date.now().toString(),
@@ -262,7 +276,17 @@ export default function App() {
                   isGuest={!isAuthenticated}
                   onUpgradeClick={() => openAuthModal('signup')}
                   onDocumentUpload={handleDocumentUpload}
+                  onCreateNewChat={async () => {
+                    if (!token) return;
+                    const created = await createChatSession(token, 'New Chat');
+                    setSessions((prev) => [created, ...prev.filter((s) => s.id !== created.id)]);
+                    setActiveChatId(created.id);
+                    setMessages([]);
+                    setUploadedDocument(null);
+                  }}
                   token={token}
+                  maxPrompts={MAX_PROMPTS_PER_CHAT}
+                  remainingPrompts={remainingPrompts}
                 />
               </div>
             </div>

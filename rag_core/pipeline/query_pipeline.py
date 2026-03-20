@@ -35,6 +35,14 @@ class QueryPipeline:
         )
         asks_about_document = any(keyword in lowered for keyword in doc_keywords)
         has_uploaded_doc = not (self.store.index is None or not self.store.metadata)
+        explicit_general_cues = (
+            "in general",
+            "generally",
+            "not from the document",
+            "ignore the document",
+            "outside the document",
+        )
+        asks_explicit_general = any(cue in lowered for cue in explicit_general_cues)
 
         # If no document has been ingested and question is document-related
         if (intent == "DOCUMENT" or asks_about_document) and not has_uploaded_doc:
@@ -51,8 +59,9 @@ class QueryPipeline:
                 "sources": []
             }
 
-        # General questions should bypass retrieval
-        if intent == "GENERAL":
+        # If a document exists, default to document-grounded answers for continuity.
+        # Only bypass retrieval when user explicitly asks for a general response.
+        if intent == "GENERAL" and (not has_uploaded_doc or asks_explicit_general):
             prompt = build_general_prompt(question, history_str)
             answer = self.llm.generate_general(prompt)
             if history is None:

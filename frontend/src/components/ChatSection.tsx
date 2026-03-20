@@ -11,7 +11,10 @@ interface ChatSectionProps {
   isGuest?: boolean;
   onUpgradeClick?: () => void;
   onDocumentUpload?: (docName: string) => void;
+  onCreateNewChat?: () => void;
   token?: string | null;
+  maxPrompts?: number;
+  remainingPrompts?: number;
 }
 
 export function ChatSection({
@@ -22,7 +25,10 @@ export function ChatSection({
   isGuest = false,
   onUpgradeClick,
   onDocumentUpload,
+  onCreateNewChat,
   token,
+  maxPrompts = 10,
+  remainingPrompts = 10,
 }: ChatSectionProps) {
   const [input, setInput] = useState('');
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'processing' | 'complete'>('idle');
@@ -133,13 +139,14 @@ export function ChatSection({
   };
 
   const isUploadBusy = uploadState === 'uploading' || uploadState === 'processing';
+  const limitReached = !isGuest && remainingPrompts <= 0;
 
   const handleSendOrCancel = () => {
     if (isUploadBusy) {
       uploadAbortRef.current?.abort();
       return;
     }
-    handleSend();
+    if (!limitReached) handleSend();
   };
 
   return (
@@ -250,6 +257,33 @@ export function ChatSection({
           </div>
         )}
 
+        {!isGuest && (
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>
+              Prompts left in this chat: <span className={remainingPrompts <= 2 ? 'text-red-600' : 'text-indigo-600'}>{Math.max(0, remainingPrompts)}</span> / {maxPrompts}
+            </span>
+            {limitReached && (
+              <div className="flex items-center gap-2">
+                <span className="text-red-600">Limit reached.</span>
+                <button
+                  type="button"
+                  onClick={onCreateNewChat}
+                  className="px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200"
+                >
+                  New Chat +
+                </button>
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200"
+                  title="Premium plans coming soon"
+                >
+                  Upgrade
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-end space-x-3">
           <input
             ref={fileInputRef}
@@ -275,11 +309,11 @@ export function ChatSection({
             onKeyPress={handleKeyPress}
             placeholder={isGuest ? 'Ask me anything...' : 'Ask a question about your document...'}
             className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
-            disabled={isAnswering || isUploadBusy}
+            disabled={isAnswering || isUploadBusy || limitReached}
           />
           <button
             onClick={handleSendOrCancel}
-            disabled={(!input.trim() && !isUploadBusy) || isAnswering}
+            disabled={(!input.trim() && !isUploadBusy) || isAnswering || (limitReached && !isUploadBusy)}
             className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 active:scale-95 flex items-center space-x-2"
           >
             {isUploadBusy ? <X className="w-5 h-5" /> : <Send className="w-5 h-5" />}

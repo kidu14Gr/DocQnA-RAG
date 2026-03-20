@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..models import ChatHistory, ChatSession
 
 HISTORY_LIMIT = 20
+MAX_PROMPTS_PER_CHAT = 10
 
 
 def _derive_title(question: str) -> str:
@@ -48,6 +49,18 @@ def get_chat_messages(db: Session, user_id: UUID, session_id: UUID) -> list[Chat
         .filter(ChatHistory.user_id == user_id, ChatHistory.session_id == session_id)
         .order_by(ChatHistory.timestamp.asc())
         .all()
+    )
+
+
+def count_user_prompts(db: Session, user_id: UUID, session_id: UUID) -> int:
+    return (
+        db.query(ChatHistory)
+        .filter(
+            ChatHistory.user_id == user_id,
+            ChatHistory.session_id == session_id,
+            ChatHistory.role == "user",
+        )
+        .count()
     )
 
 

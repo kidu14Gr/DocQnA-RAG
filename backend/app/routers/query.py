@@ -13,6 +13,8 @@ from ..db import get_db
 from ..models import User
 from ..schemas import QueryResponse
 from ..services.chat_service import (
+    MAX_PROMPTS_PER_CHAT,
+    count_user_prompts,
     create_chat_session,
     get_chat_session,
     get_recent_history,
@@ -50,6 +52,16 @@ def query(
             )
     else:
         session = create_chat_session(db, current_user.id, first_question=question)
+
+    used_prompts = count_user_prompts(db, current_user.id, session.id)
+    if used_prompts >= MAX_PROMPTS_PER_CHAT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "You have reached the 10-message limit for this chat. "
+                "Please upgrade to premium to continue in this chat or create a new chat."
+            ),
+        )
 
     history = get_recent_history(db, current_user.id, session.id)
     try:
